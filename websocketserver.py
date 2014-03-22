@@ -50,7 +50,7 @@ class WebSocketsHandler(SocketServer.StreamRequestHandler):
         else:
             self.request.send(127)
             self.request.send(struct.pack(">Q", length))
-        self.request.send(message)
+        self.request.send(message.upper())
 
     def handshake(self):
         data = self.request.recv(1024).strip()
@@ -68,6 +68,8 @@ class WebSocketsHandler(SocketServer.StreamRequestHandler):
 
     def on_message(self, message):
         print message
+        self.send_message(message)
+        
 
 if __name__ == "__main__":
     server = SocketServer.TCPServer(

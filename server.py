@@ -1,7 +1,17 @@
 import asyncio
 import socket
+import signal
+import os
+
 
 loop = asyncio.get_event_loop()
+
+bquit = b'QUIT\r\n'
+
+def signal_handler():
+    print ('\nCTRL+C pressed, exiting...\n')
+    print ("pid %s: send SIGINT to exit." % os.getpid())
+    loop.stop()
 
 
 @asyncio.coroutine
@@ -12,7 +22,12 @@ def handle_client(client, addr):
         if not data:
             print("Client has disconnected")
             break
-        client.send("tu m'as envoyé:".encode() + data)
+        
+        if data == bquit  :
+            client.close()
+            break
+
+        client.send("Tu m'as envoyé:".encode() + data)
 
 
 @asyncio.coroutine
@@ -27,9 +42,15 @@ server = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
 server.bind(('127.0.0.1', 1234))
 server.listen(128)
 server.setblocking(False)
-print ("Server listening on {}".format(server.getsockname()))
+print("Server listening on {}".format(server.getsockname()))
+print("Pid is : %s" % os.getpid())
+print("Ctrl + C to exit")
 
+loop.add_signal_handler(signal.SIGINT, signal_handler)
 
-loop.run_until_complete(accept_connections(server))
+try:
+    loop.run_until_complete(accept_connections(server))
+except Exception as e:
+    print("Exception :%s "% e)
 
 

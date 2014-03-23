@@ -6,12 +6,15 @@ import os
 
 loop = asyncio.get_event_loop()
 
+EXIT_APP = False
+
 bquit = b'QUIT\r\n'
 
 def signal_handler():
     print ('\nCTRL+C pressed, exiting...\n')
     print ("pid %s: send SIGINT to exit." % os.getpid())
-    loop.stop()
+    EXIT_APP = True
+    
 
 
 @asyncio.coroutine
@@ -34,8 +37,11 @@ def handle_client(client, addr):
 def accept_connections(server_socket):
     while True:
         client, addr = yield from loop.sock_accept(server_socket)
-        asyncio.async(handle_client(client, addr))
-
+        print ("Exit status : "+str(EXIT_APP))
+        if EXIT_APP == False:
+            asyncio.async(handle_client(client, addr))
+        if EXIT_APP == True:
+            break
 
 
 server = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)

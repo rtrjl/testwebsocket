@@ -2,6 +2,7 @@ import asyncio
 import socket
 import signal
 import os
+import time
 
 
 loop = asyncio.get_event_loop()
@@ -9,6 +10,7 @@ server = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
 
 
 EXIT_APP = False
+CONNECTIONS_LIST = list()
 
 bquit = b'QUIT\r\n'
 
@@ -17,15 +19,21 @@ def signal_handler():
     print ('\nCTRL+C pressed, exiting...\n')
     print ("pid %s: send SIGINT to exit." % os.getpid())
     EXIT_APP = True
-    print("Pending tasks at exit: %s" % asyncio.Task.all_tasks(loop))
-    loop.close()
     server.shutdown(socket.SHUT_RDWR)
+    time.sleep(1)
     server.close()
+    for client in CONNECTIONS_LIST:
+        client.close()
+    #print("Pending tasks at exit: %s" % asyncio.Task.all_tasks(loop))
+    
+    loop.close()
+    
 
 
 @asyncio.coroutine
 def handle_client(client, addr):
     print ("Client connected : {}".format(addr))
+    CONNECTIONS_LIST.append(client)
     while True:
         data = yield from loop.sock_recv(client, 4096)
         if not data:
@@ -55,8 +63,8 @@ print("Ctrl + C to exit")
 
 loop.add_signal_handler(signal.SIGINT, signal_handler)
 
-try:
-    loop.run_until_complete(accept_connections(server))
-except Exception as e:
-    print("Exception :%s " % e)
+#try:
+loop.run_until_complete(accept_connections(server))
+#except Exception as e:
+#    print("Exception :%s " % e)
 

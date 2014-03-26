@@ -1,0 +1,12 @@
+<script>
+var ws = new WebSocket("ws://127.0.0.1:8888/");
+ws.onopen = function() {
+    function schedule(i) {
+        setTimeout(function() { 
+          ws.send('Hello from the client! (iteration ' + i + ')');
+          schedule(i + 1);
+        }, 1000);            
+    };
+    schedule(1);            
+};
+</script>

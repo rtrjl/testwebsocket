@@ -1,26 +1,32 @@
 import asyncio
 from http.server import BaseHTTPRequestHandler
-from StringIO import StringIO
+from io import StringIO
 
 
 incomingQueue = asyncio.Queue()
 
 
-class WebSocketRequest(BaseHTTPRequestHandler):
+class WebSocketRequest():
+    MAXHEADERS = 4096
 
     def __init__(self, request_data):
-        self.rfile = StringIO(request_text)
-        self.raw_requestline = self.rfile.readline()
-        self.error_code = self.error_message = None
-        self.parse_request()
+       
+        self.parse_request(request_data)
     
     def handshake(self):
-        return 1
+        #wskey = self.headers.get('Sec-WebSocket-Key')
+        print("coucou")
         
-
     def send_error(self, code, message):
         self.error_code = code
         self.error_message = message
+
+    def parse_request(self, request_data):
+        headers = {}
+        if len(request_data) > 4096:
+            raise HTTPException("Header request too long")
+        request_str = request_data.decode()
+        #for line in request_str
 
 
 class PicoChatProtocol(asyncio.Protocol):
@@ -33,9 +39,9 @@ class PicoChatProtocol(asyncio.Protocol):
         self.transport = transport
 
     def data_received(self, data):
-        print(data.decode())
         if self.handshake_done is False:
-            
+            req = WebSocketRequest(data)
+            req.handshake()
             self.transport.write(data)
 
         # close the socket
@@ -54,4 +60,9 @@ except KeyboardInterrupt:
 finally:
     server.close()
     loop.close()
+
+
+
+
+
 

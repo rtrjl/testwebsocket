@@ -15,7 +15,7 @@ class WSException(Exception):
 
 class WebSocketRequest():
     MAX_HEADERS = 4096
-    WS_KEY = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+    WS_MAGIC_KEY = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
     http_method = ""
     http_version = ""
     http_path = ""
@@ -31,8 +31,9 @@ class WebSocketRequest():
             ws_key = self.headers['Sec-WebSocket-Key']
         except KeyError:
             raise WSException("WebSocket key missing")
-        ws_key = base64.b64decode(ws_key)
-        if len(ws_key) != 16:
+        #ws_key = 
+        #ws_key = ws_key.decode()
+        if len(base64.b64decode(ws_key)) != 16:
             raise WSException("Websocket key lenght is != 16")
         try:
             ws_version = int(self.headers['Sec-WebSocket-Version'])
@@ -41,18 +42,18 @@ class WebSocketRequest():
         if ws_version != 13:
             raise WSException("Websocket version must be 13")
 
-        handshake_headers = [
-            ('Upgrade', 'websocket'),
-            ('Connection', 'Upgrade'),
-        ]
-        print(type(ws_key))  # gné ?
-        ws_accept_key = base64.b64encode(sha1(ws_key
-                                              + self.WS_KEY).digest())
+        handshake_headers = {
+            'Upgrade': "websocket",
+            'Connection': "Upgrade",
+        }
+        print(type(self.WS_MAGIC_KEY))
+        ws_accept_key = base64.b64encode(sha1(ws_key.encode('utf-8')
+                                              + self.WS_MAGIC_KEY.encode('utf-8')).digest())
         handshake_headers['Sec-WebSocket-Accept'] = ws_accept_key
-        response = "HTTP/1.1 101 Switching Protocols"
+        response = "HTTP/1.1 101 Switching Protocols\r\n"
 
         for key in handshake_headers.keys():
-            response += key + ": " + handshake_headers[key]
+            response += str(key) + ": " + handshake_headers[key]+"\r\n"
 
         return response.encode()
 
@@ -93,8 +94,10 @@ class PicoChatProtocol(asyncio.Protocol):
     def data_received(self, data):
         if self.handshake_done is False:
             req = WebSocketRequest(data)
-
-            self.transport.write(req.handshake())
+            rep = req.handshake()
+            print(rep
+)
+            self.transport.write(rep)
 
         # close the socket
         self.transport.close()

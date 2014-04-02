@@ -6,11 +6,24 @@ from io import StringIO
 
 incomingQueue = asyncio.Queue()
 
+class WSClient():
+
+    def __init__(self, transport):
+        self.transport = transport
 
 class WSException(Exception):
     # Subclasses that define an __init__ must call Exception.__init__
     # or define self.args.  Otherwise, str() will fail.
     pass
+
+
+class WebSocketFrameInput():
+    def __init__(self, frame_bytes):
+        self.parse_bytes(frame_bytes)
+
+    def parse_bytes(frame_bytes):
+        return 1
+
 
 
 class WebSocketRequest():
@@ -31,14 +44,15 @@ class WebSocketRequest():
             ws_key = self.headers['Sec-WebSocket-Key']
         except KeyError:
             raise WSException("WebSocket key missing")
-        #ws_key = 
-        #ws_key = ws_key.decode()
+
         if len(base64.b64decode(ws_key)) != 16:
-            raise WSException("Websocket key lenght is != 16")
+            raise WSException("Websocket key length is != 16")
+
         try:
             ws_version = int(self.headers['Sec-WebSocket-Version'])
         except ValueError:
             raise WSException("Websocket version must be an integer")
+
         if ws_version != 13:
             raise WSException("Websocket version must be 13")
 
@@ -46,15 +60,14 @@ class WebSocketRequest():
             'Upgrade': "websocket",
             'Connection': "Upgrade",
         }
-        print(type(self.WS_MAGIC_KEY))
         ws_accept_key = base64.b64encode(sha1(ws_key.encode('utf-8')
-                                              + self.WS_MAGIC_KEY.encode('utf-8')).digest())
-        handshake_headers['Sec-WebSocket-Accept'] = ws_accept_key
-        response = "HTTP/1.1 101 Switching Protocols\r\n"
+            + self.WS_MAGIC_KEY.encode('utf-8')).digest()).decode('utf-8')
+        handshake_headers['Sec-WebSocket-Accept'] =  ws_accept_key
 
+        response = "HTTP/1.1 101 Switching Protocols\r\n"
         for key in handshake_headers.keys():
             response += str(key) + ": " + handshake_headers[key]+"\r\n"
-
+        response += "\r\n"
         return response.encode()
 
     def send_error(self, code, message):
@@ -92,15 +105,16 @@ class PicoChatProtocol(asyncio.Protocol):
         self.transport = transport
 
     def data_received(self, data):
+
         if self.handshake_done is False:
             req = WebSocketRequest(data)
             rep = req.handshake()
-            print(rep
-)
+            print(rep)
             self.transport.write(rep)
-
+            self.handshake_done = True
         # close the socket
-        self.transport.close()
+        # self.transport.close()
+
 
 loop = asyncio.get_event_loop()
 coro = loop.create_server(PicoChatProtocol, '127.0.0.1', 9999)

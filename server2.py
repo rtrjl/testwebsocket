@@ -1,15 +1,18 @@
 import asyncio
 import base64
 from hashlib import sha1
-from io import StringIO
+from io import StringIO, BytesIO
 
 
 incomingQueue = asyncio.Queue()
+
+
 
 class WSClient():
 
     def __init__(self, transport):
         self.transport = transport
+
 
 class WSException(Exception):
     # Subclasses that define an __init__ must call Exception.__init__
@@ -17,12 +20,47 @@ class WSException(Exception):
     pass
 
 
-class WebSocketFrameInput():
+class WebSocketFraming():
+    OP_CONTINUATION = 0
+    OP_TEXT = 1
+    OP_BINARY = 2
+    OP_CLOSE = 8
+    OP_PING = 9
+    OP_PONG = 10
+
+
+    fin = False
+    opcode = 0
+    data = 0
+    payload_length = 0
+    masking_key = 0
+    data = 0
+
+
+
+
     def __init__(self, frame_bytes):
         self.parse_bytes(frame_bytes)
 
-    def parse_bytes(frame_bytes):
-        return 1
+    def parse_bytes(self, frame_bytes):
+        bio = BytesIO(frame_bytes)
+        databuffer = bio.getbuffer()
+        self.fin = bool(databuffer[0] & 0b10000000)
+        self.opcode = databuffer[0] & 0b00001111
+        masked = bool(databuffer[1] & 0b10000000)
+        self.payload_length = databuffer[1] & 0b01111111
+        index = 2
+        if self.payload_length == 126:
+            self.payload_length = databuffer[2:3:-1]
+            index += 2
+        if self.payload_length == 127:
+            self.payload_length = databuffer[4:7:-1]
+            index += 6
+        if masked is True:
+            self.masking_key = databuffer[index:index+2]
+            index += 2
+        self.data = databuffer[index:len(databuffer):-1]
+        print(self.data)
 
 
 
@@ -56,13 +94,10 @@ class WebSocketRequest():
         if ws_version != 13:
             raise WSException("Websocket version must be 13")
 
-        handshake_headers = {
-            'Upgrade': "websocket",
-            'Connection': "Upgrade",
-        }
-        ws_accept_key = base64.b64encode(sha1(ws_key.encode('utf-8')
-            + self.WS_MAGIC_KEY.encode('utf-8')).digest()).decode('utf-8')
-        handshake_headers['Sec-WebSocket-Accept'] =  ws_accept_key
+        handshake_headers = {'Upgrade': "websocket", 'Connection': "Upgrade",
+                             'Sec-WebSocket-Accept': base64.b64encode(sha1(ws_key.encode('utf-8')
+                                                                           + self.WS_MAGIC_KEY.encode(
+                                 'utf-8')).digest()).decode('utf-8')}
 
         response = "HTTP/1.1 101 Switching Protocols\r\n"
         for key in handshake_headers.keys():
@@ -107,13 +142,12 @@ class PicoChatProtocol(asyncio.Protocol):
     def data_received(self, data):
 
         if self.handshake_done is False:
-            req = WebSocketRequest(data)
-            rep = req.handshake()
-            print(rep)
-            self.transport.write(rep)
+            request = WebSocketRequest(data)
+            response = request.handshake()
+            self.transport.write(response)
             self.handshake_done = True
-        # close the socket
-        # self.transport.close()
+        else:
+            frame = WebSocketFraming(data)
 
 
 loop = asyncio.get_event_loop()

@@ -34,7 +34,7 @@ class WebSocketFraming():
     data = 0
     payload_length = 0
     masking_key = 0
-    data = 0
+
 
 
 
@@ -51,16 +51,17 @@ class WebSocketFraming():
         self.payload_length = databuffer[1] & 0b01111111
         index = 2
         if self.payload_length == 126:
-            self.payload_length = databuffer[2:3:-1]
+            self.payload_length = bytes(databuffer[2:3:-1])
             index += 2
         if self.payload_length == 127:
-            self.payload_length = databuffer[4:7:-1]
+            self.payload_length = bytes(databuffer[4:7:-1])
             index += 6
         if masked is True:
-            self.masking_key = databuffer[index:index+2]
+            self.masking_key = bytes(databuffer[index:index+2])
             index += 2
-        self.data = databuffer[index:len(databuffer):-1]
+        self.data =bytes(databuffer[index:len(databuffer)-1]).decode()
         print(self.data)
+        print(len(databuffer))
 
 
 

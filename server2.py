@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import struct
 from hashlib import sha1
 from io import StringIO, BytesIO
 
@@ -51,17 +52,16 @@ class WebSocketFraming():
         self.payload_length = databuffer[1] & 0b01111111
         index = 2
         if self.payload_length == 126:
-            self.payload_length = bytes(databuffer[2:3:-1])
-            index += 2
+            self.payload_length = struct.unpack(">H", bytes(databuffer[2:4]))[0]
+            index += 3
         if self.payload_length == 127:
-            self.payload_length = bytes(databuffer[4:7:-1])
-            index += 6
-        if masked is True:
-            self.masking_key = bytes(databuffer[index:index+2])
-            index += 2
-        self.data =bytes(databuffer[index:len(databuffer)-1]).decode()
-        print(self.data)
-        print(len(databuffer))
+            self.payload_length = struct.unpack(">Q", bytes(databuffer[2:10]))[0]
+            index += 9
+        if masked:
+            self.masking_key = struct.unpack("I", bytes(databuffer[index:index+4]))[0]
+            index += 3
+        print(self.masking_key)
+
 
 
 

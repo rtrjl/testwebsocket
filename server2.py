@@ -1,16 +1,15 @@
 import asyncio
 import base64
-import struct
+import framing
+
 from hashlib import sha1
-from io import StringIO, BytesIO
+from io import StringIO
 
 
 incomingQueue = asyncio.Queue()
 
 
-
 class WSClient():
-
     def __init__(self, transport):
         self.transport = transport
 
@@ -19,51 +18,6 @@ class WSException(Exception):
     # Subclasses that define an __init__ must call Exception.__init__
     # or define self.args.  Otherwise, str() will fail.
     pass
-
-
-class WebSocketFraming():
-    OP_CONTINUATION = 0
-    OP_TEXT = 1
-    OP_BINARY = 2
-    OP_CLOSE = 8
-    OP_PING = 9
-    OP_PONG = 10
-
-
-    fin = False
-    opcode = 0
-    data = 0
-    payload_length = 0
-    masking_key = 0
-
-
-
-
-
-    def __init__(self, frame_bytes):
-        self.parse_bytes(frame_bytes)
-
-    def parse_bytes(self, frame_bytes):
-        bio = BytesIO(frame_bytes)
-        databuffer = bio.getbuffer()
-        self.fin = bool(databuffer[0] & 0b10000000)
-        self.opcode = databuffer[0] & 0b00001111
-        masked = bool(databuffer[1] & 0b10000000)
-        self.payload_length = databuffer[1] & 0b01111111
-        index = 2
-        if self.payload_length == 126:
-            self.payload_length = struct.unpack(">H", bytes(databuffer[2:4]))[0]
-            index += 3
-        if self.payload_length == 127:
-            self.payload_length = struct.unpack(">Q", bytes(databuffer[2:10]))[0]
-            index += 9
-        if masked:
-            self.masking_key = struct.unpack("I", bytes(databuffer[index:index+4]))[0]
-            index += 3
-        print(self.masking_key)
-
-
-
 
 class WebSocketRequest():
     MAX_HEADERS = 4096
@@ -102,7 +56,7 @@ class WebSocketRequest():
 
         response = "HTTP/1.1 101 Switching Protocols\r\n"
         for key in handshake_headers.keys():
-            response += str(key) + ": " + handshake_headers[key]+"\r\n"
+            response += str(key) + ": " + handshake_headers[key] + "\r\n"
         response += "\r\n"
         return response.encode()
 
@@ -133,6 +87,7 @@ class WebSocketRequest():
 
 class PicoChatProtocol(asyncio.Protocol):
     def __init__(self):
+        self.transport = None
         self.handshake_done = False
 
     def connection_made(self, transport):
@@ -141,21 +96,22 @@ class PicoChatProtocol(asyncio.Protocol):
         self.transport = transport
 
     def data_received(self, data):
-
         if self.handshake_done is False:
             request = WebSocketRequest(data)
             response = request.handshake()
             self.transport.write(response)
             self.handshake_done = True
         else:
-            frame = WebSocketFraming(data)
+            frame = framing.WSIncomingFrame(data)
+            print(frame.data.decode())
+            response = framing.WSOutGoingFrame("hello à".encode())
+            self.transport.write(response.bytes_frame)
 
 
 loop = asyncio.get_event_loop()
 coro = loop.create_server(PicoChatProtocol, '127.0.0.1', 9999)
 server = loop.run_until_complete(coro)
 print('serving on {}'.format(server.sockets[0].getsockname()))
-
 
 try:
     loop.run_forever()

@@ -1,6 +1,23 @@
 <html>
-<head></head>
+<head>
+    <link rel="stylesheet" href="pure.css">
+</head>
 <body>
+<script>
+var ws = new WebSocket("ws://127.0.0.1:9999/");
+</script>
+
+<form class="pure-form-stacked">
+    <fieldset>
+        <legend>A compact inline form</legend>
+
+       <textarea cols="50" id="mytextarea"" ></textarea>
+
+
+
+        <button onclick='sendmsg()' type="submit" class="pure-button pure-button-primary">Envoyer</button>
+    </fieldset>
+</form>
 <script>
 var ws = new WebSocket("ws://127.0.0.1:9999/");
 ws.onopen = function() {
@@ -12,6 +29,15 @@ ws.onopen = function() {
     };
     schedule(1);            
 };
+ws.onmessage = function (event) {
+  console.log(event.data);
+}
+
+function sendmsg()
+{
+   var obj = document.getElementById("mytextarea")
+   ws.send(obj.value)
+}
 </script>
 </body>
 </html>

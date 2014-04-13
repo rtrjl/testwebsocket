@@ -64,11 +64,16 @@ class WSOutGoingFrame():
         length = len(data)
         response = list()
         response.append(0b10000001)
+        if length <= 126:
+            response.append(length)
         if 126 <= length <= 65535:
             response.append(126)
+            x = struct.pack(">H", length)
+            response.extend([x[0], x[1]])
         if length >= 65535:
             response.append(127)
-        response.append(length)
+            x = struct.pack(">Q", length)
+            response.extend([x[0], x[1], x[2], x[3]])
         for octet in data:
             response.append(octet)
         self.bytes_frame = bytes(response)

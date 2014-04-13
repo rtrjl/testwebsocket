@@ -1,42 +1,58 @@
+<!DOCTYPE html>
 <html>
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="pure.css">
 </head>
 <body>
+<div id="layout" class="pure-g-r">
+
+<div class="pure-u-1-5">
+
+</div>
+<div class="pure-u-2-5">
+    <div class="pure-form">
+        <fieldset>
+
+                <label for="mytextarea">Votre message :</label>
+                <input onkeypress='return runScript(event)'  size="30" id="mytextarea">
+
+                <button onclick='sendmsg()'  class="pure-button pure-button-primary">Envoyer</button>
+
+        </fieldset>
+    </div>
+</div>
+
+</div>
 <script>
-var ws = new WebSocket("ws://127.0.0.1:9999/");
-</script>
-
-<form class="pure-form-stacked">
-    <fieldset>
-        <legend>A compact inline form</legend>
-
-       <textarea cols="50" id="mytextarea"" ></textarea>
 
 
+    var ws = new WebSocket("ws://127.0.0.1:9999/");
+    /*ws.onopen = function() {
+     function schedule(i) {
+     setTimeout(function() {
+     ws.send('Hello from the client! (iteration ' + i + ')');
+     schedule(i + 1);
+     }, 1000);
+     };
+     schedule(1);
+     };*/
+    ws.onmessage = function (event) {
+        console.log(event.data);
+    }
 
-        <button onclick='sendmsg()' type="submit" class="pure-button pure-button-primary">Envoyer</button>
-    </fieldset>
-</form>
-<script>
-var ws = new WebSocket("ws://127.0.0.1:9999/");
-ws.onopen = function() {
-    function schedule(i) {
-        setTimeout(function() { 
-          ws.send('Hello from the client! (iteration ' + i + ')');
-          schedule(i + 1);
-        }, 1000);            
-    };
-    schedule(1);            
-};
-ws.onmessage = function (event) {
-  console.log(event.data);
-}
+    function sendmsg() {
+        var obj = document.getElementById("mytextarea")
+        ws.send(obj.value)
+        return false;
 
-function sendmsg()
-{
-   var obj = document.getElementById("mytextarea")
-   ws.send(obj.value)
+    }
+    function runScript(e) {
+    if (e.keyCode == 13) {
+        var obj = document.getElementById("mytextarea");
+        ws.send(obj.value)
+        return false;
+    }
 }
 </script>
 </body>

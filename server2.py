@@ -103,8 +103,8 @@ class PicoChatProtocol(asyncio.Protocol):
             self.handshake_done = True
         else:
             frame = framing.WSIncomingFrame(data)
-            print(frame.data.decode())
-            response = framing.WSOutGoingFrame("hello à".encode())
+            print(frame.data)
+            response = framing.WSOutGoingFrame("Lorem Ipsum' vous conduira vers de nombreux sites qui n'en sont encore qu'à leur phase de construction. 123456789 123456789 123456789".encode())
             self.transport.write(response.bytes_frame)
 
 

@@ -86,14 +86,13 @@ class WebSocketRequest():
 
 
 class PicoChatProtocol(asyncio.Protocol):
-    def __init__(self):
-        self.transport = None
+    def __init__(self, ):
         self.handshake_done = False
 
     def connection_made(self, transport):
+        self.transport = transport
         peername = transport.get_extra_info('peername')
         print('connection from {}'.format(peername))
-        self.transport = transport
 
     def data_received(self, data):
         if self.handshake_done is False:
@@ -103,10 +102,15 @@ class PicoChatProtocol(asyncio.Protocol):
             self.handshake_done = True
         else:
             frame = framing.WSIncomingFrame(data)
-            print(frame.data)
-            response = framing.WSOutGoingFrame("Lorem Ipsum' vous conduira vers de nombreux sites qui n'en sont encore qu'à leur phase de construction. 123456789 123456789 123456789".encode())
+            response = framing.WSOutGoingFrame("response".encode())
             self.transport.write(response.bytes_frame)
+            print(response.bytes_frame)
 
+    def pause_writing(self):
+        print('pause')
+
+    def resume_writing(self):
+        print('resume')
 
 loop = asyncio.get_event_loop()
 coro = loop.create_server(PicoChatProtocol, '127.0.0.1', 9999)

@@ -1,5 +1,5 @@
 import struct
-import os
+
 
 class WSIncomingFrame():
     OP_CONTINUATION = 0
@@ -53,8 +53,6 @@ class WSOutGoingFrame():
     opcode = 0
     data = 0
     payload_length = 0
-
-
     bytes_frame = None
 
     def __init__(self, data):
@@ -68,12 +66,9 @@ class WSOutGoingFrame():
             response.append(length)
         if 126 <= length <= 65535:
             response.append(126)
-            x = struct.pack(">H", length)
-            response.extend([x[0], x[1]])
+            response.extend(struct.pack(">H", length))
         if length >= 65535:
             response.append(127)
-            x = struct.pack(">Q", length)
-            response.extend([x[0], x[1], x[2], x[3]])
-        for octet in data:
-            response.append(octet)
+            response.extend(struct.pack(">Q", length))
+        response.extend(data)
         self.bytes_frame = bytes(response)

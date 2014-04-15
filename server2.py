@@ -1,88 +1,10 @@
 import asyncio
-import base64
-import framing
-
-from hashlib import sha1
-from io import StringIO
+import websocket
 
 
 incomingQueue = asyncio.Queue()
-
-
-class WSClient():
-    def __init__(self, transport):
-        self.transport = transport
-
-
-class WSException(Exception):
-    # Subclasses that define an __init__ must call Exception.__init__
-    # or define self.args.  Otherwise, str() will fail.
-    pass
-
-class WebSocketRequest():
-    MAX_HEADERS = 4096
-    WS_MAGIC_KEY = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-    http_method = ""
-    http_version = ""
-    http_path = ""
-    headers = {}
-
-    def __init__(self, request_data):
-        self.parse_request(request_data)
-
-    def handshake(self):
-        ws_key = ""
-        ws_version = 0
-        try:
-            ws_key = self.headers['Sec-WebSocket-Key']
-        except KeyError:
-            raise WSException("WebSocket key missing")
-
-        if len(base64.b64decode(ws_key)) != 16:
-            raise WSException("Websocket key length is != 16")
-
-        try:
-            ws_version = int(self.headers['Sec-WebSocket-Version'])
-        except ValueError:
-            raise WSException("Websocket version must be an integer")
-
-        if ws_version != 13:
-            raise WSException("Websocket version must be 13")
-
-        handshake_headers = {'Upgrade': "websocket", 'Connection': "Upgrade",
-                             'Sec-WebSocket-Accept': base64.b64encode(sha1(ws_key.encode('utf-8')
-                                                                           + self.WS_MAGIC_KEY.encode(
-                                 'utf-8')).digest()).decode('utf-8')}
-
-        response = "HTTP/1.1 101 Switching Protocols\r\n"
-        for key in handshake_headers.keys():
-            response += str(key) + ": " + handshake_headers[key] + "\r\n"
-        response += "\r\n"
-        return response.encode()
-
-    def send_error(self, code, message):
-        self.error_code = code
-        self.error_message = message
-
-    def parse_request(self, request_data):
-        if len(request_data) > self.MAX_HEADERS:
-            raise WSException("Request too long for me")
-
-        request_str = StringIO(request_data.decode())
-        try:
-            self.http_method, self.http_path, self.http_version \
-                = request_str.readline().split(" ")
-        except:
-            raise WSException("Malformed request line")
-
-        if self.http_method != "GET":
-            raise WSException("HTTP method must be GET")
-
-        for line in request_str.readlines():
-            if line in ("\r\n", "\n", ""):
-                break
-            key, value = line.split(":", 1)
-            self.headers[key] = value.strip()
+outgoingQueue = asyncio.Queue()
+banned = dict()
 
 
 class PicoChatProtocol(asyncio.Protocol):
@@ -91,26 +13,30 @@ class PicoChatProtocol(asyncio.Protocol):
 
     def connection_made(self, transport):
         self.transport = transport
+        self.transport.max_size = 2048
+        if transport.get_extra_info('peername')[0] in banned:
+            self.transport.close()
         peername = transport.get_extra_info('peername')
         print('connection from {}'.format(peername))
 
     def data_received(self, data):
+        # len(data) < 1024 < self.transport.max_size
+        if len(data) > 1024:
+            banned[self.transport.get_extra_info('peername')[0]] = True
+            self.transport.close()
+            return 0
+
         if self.handshake_done is False:
-            request = WebSocketRequest(data)
+            request = websocket.WebSocketHTTPRequest(data)
             response = request.handshake()
             self.transport.write(response)
             self.handshake_done = True
         else:
-            frame = framing.WSIncomingFrame(data)
-            response = framing.WSOutGoingFrame("response".encode())
+            frame = websocket.WSIncomingFrame(data)
+            incomingQueue.put(frame)
+            response = websocket.WSOutGoingFrame("response".encode())
             self.transport.write(response.bytes_frame)
-            print(response.bytes_frame)
 
-    def pause_writing(self):
-        print('pause')
-
-    def resume_writing(self):
-        print('resume')
 
 loop = asyncio.get_event_loop()
 coro = loop.create_server(PicoChatProtocol, '127.0.0.1', 9999)

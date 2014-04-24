@@ -18,14 +18,21 @@ def test_byte(bytetotest, nb_bits):
         return True
 
 def test_bytes(bytestotest, nb_bits):
-    nb_bytes = nb_bits / 8
-    nb_bits = nb_bits % 8
+    reste = nb_bits % 8
+    if reste != 0:
+        nb_bytes = (nb_bits // 8) + 1
+    else:
+        nb_bytes = nb_bits //8
+    nb_bits = reste
 
     for i in range(nb_bytes):
-        if nb_bits != 0:
-            
-        if bytestotest[i] == 0 and (i+1) == nb_bytes :
-            if nb_bits !=0:
+        if nb_bytes-1 > i:
+            if test_byte(bytestotest[i], 8):
+                continue
+            else:
+                return False
+
+    return test_byte(bytestotest[i], nb_bits)
 
 
 
@@ -34,9 +41,11 @@ while True:
     turn = turn+1
     b = b + turn
     msg=a+"::"+str(b)
-    hash = hashlib.sha1(msg.encode()).hexdigest()
-    hash2 = hashlib.sha1(msg.encode()).digest()
-    print(len(hash2))
-    if test_byte(hash2[0], 8):
+    hash = hashlib.sha256(msg.encode()).hexdigest()
+    hash2 = hashlib.sha256(msg.encode()).digest()
+    if test_bytes(hash2, 19):
+        print(msg)
         print(hash)
+        for octet in hash2:
+            print(octet)
         break

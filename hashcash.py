@@ -3,20 +3,14 @@ import struct
 import hashlib
 
 
-byte_test_table = [127, 63, 31, 15, 7, 3, 1, 0]
+byte_test_table = [255, 127, 63, 31, 15, 7, 3, 1, 0]
 
 
 def test_byte(bytetotest, nb_bits):
-    if ( bytetotest > byte_test_table[nb_bits-1]):
+    if ( bytetotest > byte_test_table[nb_bits]):
         return False
     else:
         return True
-
-
-"""
-426479724
-00000000690ed426ccf17803ebe2bd0884bcd58a1bb5e7477ead3645f356e7a9
-"""
 
 def test_bytes(bytestotest, nb_bits):
     reste = nb_bits % 8
@@ -47,7 +41,7 @@ def run():
         msg = str(b)
         hash = hashlib.sha256(msg.encode()).hexdigest()
         hash2 = hashlib.sha256(msg.encode()).digest()
-        if test_bytes(hash2, 31):
+        if test_bytes(hash2, 9):
             print(msg)
             print(hash)
             for octet in hash2:
